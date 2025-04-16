@@ -9,4 +9,6 @@ public class TransactionResponse {
     private String fromTo;
     private String description;
     private int amount;
+    private String status;
+    private String message;
 }
