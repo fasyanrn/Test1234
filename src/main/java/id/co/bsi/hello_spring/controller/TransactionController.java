@@ -48,7 +48,7 @@ public class TransactionController {
     @GetMapping("api/transaction")
     public ResponseEntity<?> transactionHistory(@RequestHeader(value = "token", required = false) String token) {
 
-        String dummyToken = "DUMMY123TOKEN";
+        String dummyToken = "EWUd8X0vAJ/Ox1vx/SgfAg==";
         if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Unauthorized: Token is missing or invalid");

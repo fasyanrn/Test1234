@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 public class TransferController {
 
 
-    @PostMapping("/transfer")
+    @PostMapping("/api/transfer")
     public ResponseEntity<TransferResponse> transfer(@RequestBody TransferRequest transferRequest) {
         TransferResponse transferResponse = new TransferResponse();
         transferResponse.setStatus("transfer success");
@@ -19,10 +19,10 @@ public class TransferController {
         return ResponseEntity.ok(transferResponse);
     }
 
-    @GetMapping("/rekening")
+    @GetMapping("/api/rekening")
 
     public ResponseEntity<?> rekening(@RequestHeader(value = "token", required = false) String token) {
-            String dummyToken = "DUMMY123TOKEN";
+            String dummyToken = "EWUd8X0vAJ/Ox1vx/SgfAg==";
 
             if (token == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
