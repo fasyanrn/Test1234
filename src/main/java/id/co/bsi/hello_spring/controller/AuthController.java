@@ -30,11 +30,11 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        //
+        //Yaaa Hashing buat password dan Hashing buat token
         String passwordHash = hash(registerRequest.getPassword());
         String token = hash(registerRequest.getEmail() + ":" + registerRequest.getPassword());
 
-        //Set untuk register dan dilempar ke util
+        //Save buat register
         User newUser = new User();
         newUser.setFullName(registerRequest.getFullName());
         newUser.setEmail(registerRequest.getEmail());
@@ -58,7 +58,7 @@ public class AuthController {
         var userOpt = UserUtil.findUserByEmail(loginRequest.getEmail());
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(401).build();
-            
+
         }
 
         //Panggil get dan cek jika passwordnya sesuai sama yang di hash
