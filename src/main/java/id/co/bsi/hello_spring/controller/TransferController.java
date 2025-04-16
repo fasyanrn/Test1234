@@ -3,14 +3,13 @@ package id.co.bsi.hello_spring.controller;
 import id.co.bsi.hello_spring.dto.request.TransferRequest;
 import id.co.bsi.hello_spring.dto.response.RekeningResponse;
 import id.co.bsi.hello_spring.dto.response.TransferResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class TransferController {
+
 
     @PostMapping("/transfer")
     public ResponseEntity<TransferResponse> transfer(@RequestBody TransferRequest transferRequest) {
@@ -21,8 +20,20 @@ public class TransferController {
     }
 
     @GetMapping("/rekening")
-    public ResponseEntity<RekeningResponse> rekening() {
-        RekeningResponse rekeningResponse = new RekeningResponse();
+
+    public ResponseEntity<?> rekening(@RequestHeader(value = "token", required = false) String token) {
+            String dummyToken = "DUMMY123TOKEN";
+
+            if (token == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unauthorized: Token is missing or invalid");
+            }
+
+            if (!token.equals(dummyToken)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unauthorized: Invalid token");
+            }
+            RekeningResponse rekeningResponse = new RekeningResponse();
 
         RekeningResponse.RekeningData rekeningData = new RekeningResponse.RekeningData();
         rekeningData.setAccount_number("1239");
@@ -39,6 +50,7 @@ public class TransferController {
 //        rekeningResponse.setAccount_name("aan");
 
         return ResponseEntity.ok(rekeningResponse);
+
 
     }
 }
