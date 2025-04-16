@@ -2,7 +2,6 @@ package id.co.bsi.hello_spring.controller;
 
 import id.co.bsi.hello_spring.dto.request.LoginRequest;
 import id.co.bsi.hello_spring.dto.response.LoginResponse;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,4 +18,6 @@ public class LoginController {
 
         return ResponseEntity.ok(loginResponse);
     }
+
+
 }
