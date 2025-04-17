@@ -40,7 +40,7 @@ public class TransferController {
         rekeningData.setAccount_name("Jack");
 
         RekeningResponse.RekeningData rekeningData2 = new RekeningResponse.RekeningData();
-        rekeningData.setAccount_number("125");
+        rekeningData2.setAccount_number("125");
         rekeningData2.setAccount_name("Jack 2");
 
         rekeningResponse.getData().add(rekeningData);
