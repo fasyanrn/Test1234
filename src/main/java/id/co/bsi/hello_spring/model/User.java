@@ -4,27 +4,24 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "users")
 @Data
+@Table(name = "users")
 public class User {
 
-    //Generate buat bikin tablenya
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String accountnum; // ini jadi PRIMARY KEY
 
-    @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(nullable = false)
+    @Column(unique = true)
     private String phone;
 
-    @Column(nullable = false, unique = true)
     private String token;
+
+    private int balance = 0;
 }
