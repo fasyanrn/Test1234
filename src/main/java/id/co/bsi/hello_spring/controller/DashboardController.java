@@ -31,7 +31,7 @@ public class DashboardController {
         data.setBalance(10_000_000);
 
         response.setStatus("success");
-        response.setMessage("Success Lah Broo");
+        response.setMessage("Dashboard successfully displayed");
         response.setData(data);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

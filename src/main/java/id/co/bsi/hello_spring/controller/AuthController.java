@@ -29,7 +29,6 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        //
         String passwordHash = hash(registerRequest.getPassword());
         String token = hash(registerRequest.getEmail() + ":" + registerRequest.getPassword());
 
@@ -83,6 +82,7 @@ public class AuthController {
 
 
     //hashing string menggunakan algoritma MD5 lalu mengubah hasilnya ke Base64
+    //hashinng gabisa dibalikin, validasi pake check-sum. Kalo encryption bisa balik kek punya key gitu lah buat ngebalikinnya
     private String hash(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
