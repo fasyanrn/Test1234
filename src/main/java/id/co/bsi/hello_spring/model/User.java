@@ -8,6 +8,7 @@ import lombok.Data;
 @Data
 public class User {
 
+    //Generate buat bikin tablenya
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
