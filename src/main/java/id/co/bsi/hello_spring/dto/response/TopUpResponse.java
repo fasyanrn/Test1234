@@ -3,8 +3,10 @@ package id.co.bsi.hello_spring.dto.response;
 import lombok.Data;
 
 @Data
-public class LoginResponse {
+public class TopUpResponse {
     private String status;
-    private String token;
     private String message;
+
+    public static class OptionTopUp {
+    }
 }

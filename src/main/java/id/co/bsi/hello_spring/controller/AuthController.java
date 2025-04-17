@@ -16,7 +16,6 @@ import java.util.List;
 
 @RestController
 public class AuthController {
-
     //
     @PostMapping("/api/register")
     public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest registerRequest) {
@@ -30,11 +29,10 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        //Yaaa Hashing buat password dan Hashing buat token
         String passwordHash = hash(registerRequest.getPassword());
         String token = hash(registerRequest.getEmail() + ":" + registerRequest.getPassword());
 
-        //Save buat register
+        //Set untuk register dan dilempar ke util
         User newUser = new User();
         newUser.setFullName(registerRequest.getFullName());
         newUser.setEmail(registerRequest.getEmail());
@@ -54,31 +52,37 @@ public class AuthController {
 
     @PostMapping("/api/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        //Cek email
+        LoginResponse response = new LoginResponse();
+
+        // Cek apakah email ada
         var userOpt = UserUtil.findUserByEmail(loginRequest.getEmail());
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).build();
-
+            response.setStatus("error");
+            response.setMessage("Email not found.");
+            return ResponseEntity.status(401).body(response);
         }
 
-        //Panggil get dan cek jika passwordnya sesuai sama yang di hash
+        // Ambil user dan cek password
         User user = userOpt.get();
         if (!user.getPasswordHash().equals(hash(loginRequest.getPassword()))) {
-            return ResponseEntity.status(401).build();
-
+            response.setStatus("error");
+            response.setMessage("Incorrect password.");
+            return ResponseEntity.status(401).body(response);
         }
-        //Kalau sukses lanjut
-        LoginResponse response = new LoginResponse();
+
+        // Kalau sukses
         response.setStatus("success");
         response.setToken(user.getToken());
+        response.setMessage("Login successful.");
 
-        //Dapetin tokennya
         return ResponseEntity.ok()
-                .header("Token ", user.getToken())
+                .header("Token", user.getToken())
                 .body(response);
     }
 
+
     //hashing string menggunakan algoritma MD5 lalu mengubah hasilnya ke Base64
+    //hashinng gabisa dibalikin, validasi pake check-sum. Kalo encryption bisa balik kek punya key gitu lah buat ngebalikinnya
     private String hash(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
