@@ -23,5 +23,5 @@ public class User {
 
     private String token;
 
-    private int balance = 0;
+    private int balance = 1000000;
 }

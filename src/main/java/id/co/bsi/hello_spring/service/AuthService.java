@@ -49,7 +49,7 @@ public class AuthService {
         user.setPhone(req.getPhone().toString());
         user.setPasswordHash(hash(req.getPassword()));
         user.setToken(hash(req.getEmail() + ":" + req.getPassword()));
-        user.setBalance(0);
+        user.setBalance(1000000);
 
         userRepository.save(user);
 
