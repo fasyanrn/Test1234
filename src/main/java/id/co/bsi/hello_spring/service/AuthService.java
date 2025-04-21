@@ -6,80 +6,90 @@ import id.co.bsi.hello_spring.dto.response.LoginResponse;
 import id.co.bsi.hello_spring.dto.response.RegisterResponse;
 import id.co.bsi.hello_spring.model.User;
 import id.co.bsi.hello_spring.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.Optional;
 
 @Service
 public class AuthService {
 
-    private final UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-    public AuthService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    // Variabel untuk menyimpan counter (bisa simpan dalam memori, atau menggunakan DB, kali ini tetap di dalam service)
+    private static long counter = 100000; // Mulai dari 100000
 
-    public RegisterResponse register(RegisterRequest request) {
-        RegisterResponse response = new RegisterResponse();
-
-        //Cek apakah email sudah ada atau belum
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            response.setStatus("error");
-            response.setMessage("Email already registered.");
-            return response;
+    public RegisterResponse register(RegisterRequest req) {
+        RegisterResponse res = new RegisterResponse();
+        Optional<User> existing = userRepository.findByEmail(req.getEmail());
+        if (existing.isPresent()) {
+            res.setStatus("error");
+            res.setMessage("Email already registered.");
+            return res;
         }
 
-        String passwordHash = hash(request.getPassword());
-        String token = hash(request.getEmail() + ":" + request.getPassword());
+        // Cek apakah nomor telepon sudah terdaftar
+        Optional<User> existingPhone = userRepository.findByPhone(req.getPhone().toString());
+        if (existingPhone.isPresent()) {
+            res.setStatus("error");
+            res.setMessage("Phone number already registered.");
+            return res;
+        }
 
-        User newUser = new User();
-        newUser.setFullName(request.getFullName());
-        newUser.setEmail(request.getEmail());
-        newUser.setPhone(request.getPhone().toString());
-        newUser.setPasswordHash(passwordHash);
-        newUser.setToken(token);
+        // Generate accountnum dari counter yang bertambah setiap kali user baru
+        String accountnum = String.valueOf(generateAccountNum());
 
-        userRepository.save(newUser);
+        User user = new User();
+        user.setAccountnum(accountnum); // Menggunakan accountnum yang sudah di generate
+        user.setFullName(req.getFullName());
+        user.setEmail(req.getEmail());
+        user.setPhone(req.getPhone().toString());
+        user.setPasswordHash(hash(req.getPassword()));
+        user.setToken(hash(req.getEmail() + ":" + req.getPassword()));
+        user.setBalance(0);
 
-        response.setStatus("success");
-        response.setMessage("Registration Successful!");
-        return response;
+        userRepository.save(user);
+
+        res.setStatus("success");
+        res.setMessage("Registration successful.");
+        return res;
     }
 
-    public LoginResponse login(LoginRequest request) {
-        LoginResponse response = new LoginResponse();
+    private synchronized long generateAccountNum() {
+        counter++; // Increment counter
+        return counter; // Return angka baru
+    }
 
-        //Cek apakah email sudah ada atau belum
-        var userOpt = userRepository.findByEmail(request.getEmail());
+    public LoginResponse login(LoginRequest req) {
+        LoginResponse res = new LoginResponse();
+        Optional<User> userOpt = userRepository.findByEmail(req.getEmail());
         if (userOpt.isEmpty()) {
-            response.setStatus("error");
-            response.setMessage("Email not found.");
-            return response;
+            res.setStatus("error");
+            res.setMessage("Email not found.");
+            return res;
         }
 
-
-        //Cek apakah password sudah ada atau belum
         User user = userOpt.get();
-        if (!user.getPasswordHash().equals(hash(request.getPassword()))) {
-            response.setStatus("error");
-            response.setMessage("Incorrect password.");
-            return response;
+        if (!user.getPasswordHash().equals(hash(req.getPassword()))) {
+            res.setStatus("error");
+            res.setMessage("Incorrect password.");
+            return res;
         }
 
-        //Keluarin output jika sukses
-        response.setStatus("success");
-        response.setToken(user.getToken());
-        response.setMessage("Login successful.");
-        return response;
+        res.setStatus("success");
+        res.setToken(user.getToken());
+        res.setAccountnum(user.getAccountnum());
+        res.setMessage("Login successful.");
+        return res;
     }
 
-    //Sistem hashing
     private String hash(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
-            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            byte[] hash = digest.digest(input.getBytes());
             return Base64.getEncoder().encodeToString(hash);
         } catch (Exception e) {
             throw new RuntimeException(e);
