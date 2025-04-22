@@ -49,12 +49,13 @@ public class AuthService {
         user.setPhone(req.getPhone().toString());
         user.setPasswordHash(hash(req.getPassword()));
         user.setToken(hash(req.getEmail() + ":" + req.getPassword()));
-        user.setBalance(1000000);
+        user.setBalance(0);
 
         userRepository.save(user);
 
         res.setStatus("success");
         res.setMessage("Registration successful.");
+        res.setAccountnum(accountnum);
         return res;
     }
 
