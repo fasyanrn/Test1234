@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class AuthService {
@@ -19,11 +20,27 @@ public class AuthService {
     @Autowired
     private UserRepository userRepository;
 
-    // Variabel untuk menyimpan counter (bisa simpan dalam memori, atau menggunakan DB, kali ini tetap di dalam service)
-    private static long counter = 100000; // Mulai dari 100000
-
     public RegisterResponse register(RegisterRequest req) {
         RegisterResponse res = new RegisterResponse();
+
+        if (req.getFullName() == null || req.getFullName().trim().isEmpty()) {
+            res.setStatus("error");
+            res.setMessage("Full name cannot be empty.");
+            return res;
+        }
+
+        if (req.getPhone() == null || req.getPhone().toString().trim().isEmpty()) {
+            res.setStatus("error");
+            res.setMessage("Phone number cannot be empty.");
+            return res;
+        }
+
+        if (!isValidPassword(req.getPassword())) {
+            res.setStatus("error");
+            res.setMessage("Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.");
+            return res;
+        }
+
         Optional<User> existing = userRepository.findByEmail(req.getEmail());
         if (existing.isPresent()) {
             res.setStatus("error");
@@ -31,19 +48,10 @@ public class AuthService {
             return res;
         }
 
-        // Cek apakah nomor telepon sudah terdaftar
-        Optional<User> existingPhone = userRepository.findByPhone(req.getPhone().toString());
-        if (existingPhone.isPresent()) {
-            res.setStatus("error");
-            res.setMessage("Phone number already registered.");
-            return res;
-        }
-
-        // Generate accountnum dari counter yang bertambah setiap kali user baru
-        String accountnum = String.valueOf(generateAccountNum());
+        String accountnum = generateAccountNum();
 
         User user = new User();
-        user.setAccountnum(accountnum); // Menggunakan accountnum yang sudah di generate
+        user.setAccountnum(accountnum);
         user.setFullName(req.getFullName());
         user.setEmail(req.getEmail());
         user.setPhone(req.getPhone().toString());
@@ -59,9 +67,26 @@ public class AuthService {
         return res;
     }
 
-    private synchronized long generateAccountNum() {
-        counter++; // Increment counter
-        return counter; // Return angka baru
+
+    private String generateAccountNum() {
+        Random random = new Random();
+        StringBuilder accountnum = new StringBuilder("7"); // Depan 7
+        for (int i = 0; i < 9; i++) {
+            accountnum.append(random.nextInt(10)); // Tambah 9 digit random
+        }
+        return accountnum.toString();
+    }
+
+    private boolean isValidPassword(String password) {
+        if (password == null || password.length() < 8) return false;
+        boolean hasUpper = false, hasLower = false, hasDigit = false, hasSpecial = false;
+        for (char c : password.toCharArray()) {
+            if (Character.isUpperCase(c)) hasUpper = true;
+            else if (Character.isLowerCase(c)) hasLower = true;
+            else if (Character.isDigit(c)) hasDigit = true;
+            else hasSpecial = true;
+        }
+        return hasUpper && hasLower && hasDigit && hasSpecial;
     }
 
     public LoginResponse login(LoginRequest req) {

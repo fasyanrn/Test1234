@@ -20,11 +20,28 @@ public class PinController {
         String accountnum = payload.get("accountnum");
         String pin = payload.get("pin");
 
-        if (accountnum == null || pin == null) {
-            return ResponseEntity.badRequest().body("accountnum and pin must be provided.");
+        if (accountnum == null || pin == null || pin.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "accountnum and pin must be provided."));
+        }
+
+        if (!pin.matches("\\d{6}")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "PIN must be exactly 6 digits."));
+        }
+
+        // Validasi accountnum ada di DB
+        boolean accountExists = pinService.checkAccountExists(accountnum);
+        if (!accountExists) {
+            return ResponseEntity.status(404).body(Map.of("message", "Account number not found."));
         }
 
         String result = pinService.registerPin(accountnum, pin);
+
+        if ("PIN already registered.".equals(result)) {
+            return ResponseEntity.status(409).body(Map.of("message", result));
+        }
+
         return ResponseEntity.ok(Map.of("message", result));
     }
+
+
 }
