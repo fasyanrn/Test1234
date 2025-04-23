@@ -1,52 +1,38 @@
-
 package id.co.bsi.hello_spring.service;
 
 import id.co.bsi.hello_spring.model.TransactionModel;
-import id.co.bsi.hello_spring.model.User;
 import id.co.bsi.hello_spring.repository.TransactionRepository;
-import id.co.bsi.hello_spring.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class TransactionService {
 
-    public void save(TransactionModel txn) {
-        transactionRepository.save(txn);
-    }
-
     @Autowired
     private TransactionRepository transactionRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    public Page<TransactionModel> getFilteredTransactions(String token, String accountnum,
-                                                           String keyword, int page, int size,
-                                                           String sortBy, String direction) {
-        Optional<User> userOpt = userRepository.findByToken(token);
+    public Page<TransactionModel> getFilteredTransactions(String accountnum, String keyword, int page, int size, String sortBy, String direction) {
         Sort sort = Sort.by(Sort.Direction.fromOptionalString(direction.toUpperCase()).orElse(Sort.Direction.DESC), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
-
-        if (userOpt.isEmpty() || !userOpt.get().getAccountnum().equals(accountnum)) {
-            return Page.empty(pageable);
-        }
 
         List<TransactionModel> allData = transactionRepository.findAllByAccountnum(accountnum);
         if (keyword != null && !keyword.trim().isEmpty()) {
             String kw = keyword.trim().toLowerCase();
             allData = allData.stream()
                     .filter(t ->
-                        (t.getDescription() != null && t.getDescription().toLowerCase().contains(kw)) ||
-                        (t.getFromTo() != null && t.getFromTo().toLowerCase().contains(kw)) ||
-                        (t.getType() != null && t.getType().toLowerCase().contains(kw)) ||
-                        String.valueOf(t.getAmount()).contains(kw) ||
-                        (t.getDateTime() != null && t.getDateTime().toLowerCase().contains(kw))
+                            (t.getDescription() != null && t.getDescription().toLowerCase().contains(kw)) ||
+                                    (t.getFromTo() != null && t.getFromTo().toLowerCase().contains(kw)) ||
+                                    (t.getType() != null && t.getType().toLowerCase().contains(kw)) ||
+                                    String.valueOf(t.getAmount()).contains(kw) ||
+                                    (t.getDateTime() != null && t.getDateTime().toLowerCase().contains(kw))
                     )
                     .collect(Collectors.toList());
         }
@@ -58,11 +44,61 @@ public class TransactionService {
         return new PageImpl<>(pagedData, pageable, allData.size());
     }
 
-    public TransactionModel saveTransaction(String token, TransactionModel transaction) {
-        Optional<User> userOpt = userRepository.findByToken(token);
-        if (userOpt.isEmpty() || !userOpt.get().getAccountnum().equals(transaction.getAccountnum())) {
-            return null;
-        }
+    public TransactionModel saveTransaction(TransactionModel transaction) {
         return transactionRepository.save(transaction);
     }
+
+    public Map<String, Integer> getTransactionSummary(String accountnum) {
+        List<TransactionModel> transactions = transactionRepository.findAllByAccountnum(accountnum);
+
+        int totalIncome = transactions.stream()
+                .filter(t -> "income".equalsIgnoreCase(t.getType()))
+                .mapToInt(TransactionModel::getAmount)
+                .sum();
+
+        int totalExpense = transactions.stream()
+                .filter(t -> "expense".equalsIgnoreCase(t.getType()))
+                .mapToInt(TransactionModel::getAmount)
+                .sum();
+
+        return Map.of(
+                "totalIncome", totalIncome,
+                "totalExpense", totalExpense
+        );
+    }
+
+    public Map<String, Integer> getTransactionSummaryByMonth(String accountnum, int monthsAgo) {
+        List<TransactionModel> transactions = transactionRepository.findAllByAccountnum(accountnum);
+
+        LocalDate now = LocalDate.now().minusMonths(monthsAgo);
+        int year = now.getYear();
+        int month = now.getMonthValue();
+
+        List<TransactionModel> filtered = transactions.stream()
+                .filter(t -> {
+                    try {
+                        LocalDateTime dateTime = LocalDateTime.parse(t.getDateTime()); // AUTO ISO PARSE
+                        return dateTime.getYear() == year && dateTime.getMonthValue() == month;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .collect(Collectors.toList());
+
+        int totalIncome = filtered.stream()
+                .filter(t -> "income".equalsIgnoreCase(t.getType()))
+                .mapToInt(TransactionModel::getAmount)
+                .sum();
+
+        int totalExpense = filtered.stream()
+                .filter(t -> "expense".equalsIgnoreCase(t.getType()))
+                .mapToInt(TransactionModel::getAmount)
+                .sum();
+
+        return Map.of(
+                "totalIncome", totalIncome,
+                "totalExpense", totalExpense
+        );
+    }
 }
+
