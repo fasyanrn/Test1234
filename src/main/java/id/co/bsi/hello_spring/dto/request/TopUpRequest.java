@@ -11,4 +11,10 @@ public class TopUpRequest {
     private String accountnum;
     private String pin;
     private String method;
+
+    // Tambahan validasi kartu
+    private String cardNumber;
+    private String cvv;
+    private String expirationDate;
 }
+
