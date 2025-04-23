@@ -2,17 +2,16 @@
 package id.co.bsi.hello_spring.service;
 
 import id.co.bsi.hello_spring.dto.request.TransferRequest;
-import id.co.bsi.hello_spring.model.TransactionModel;
+import id.co.bsi.hello_spring.dto.response.TransferResponse;
 import id.co.bsi.hello_spring.model.User;
 import id.co.bsi.hello_spring.model.UserPin;
-import id.co.bsi.hello_spring.repository.TransactionRepository;
-import id.co.bsi.hello_spring.repository.UserPinRepository;
 import id.co.bsi.hello_spring.repository.UserRepository;
+import id.co.bsi.hello_spring.repository.UserPinRepository;
+import id.co.bsi.hello_spring.repository.TransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.security.MessageDigest;
-import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -28,63 +27,85 @@ public class TransferService {
     @Autowired
     private UserPinRepository userPinRepository;
 
-    public String transfer(TransferRequest request) {
+    public TransferResponse transfer(TransferRequest request) {
+        TransferResponse res = new TransferResponse();
+
         Optional<User> fromUserOpt = userRepository.findByAccountnum(request.getFromAccountnum());
         Optional<User> toUserOpt = userRepository.findByAccountnum(request.getToAccountnum());
 
-        if (fromUserOpt.isEmpty() || toUserOpt.isEmpty()) {
-            return "Account not found";
+        if (!fromUserOpt.isPresent() || !toUserOpt.isPresent()) {
+            res.setStatus("error");
+            res.setMessage("User not found");
+            return res;
         }
 
         User fromUser = fromUserOpt.get();
         User toUser = toUserOpt.get();
 
+        // Validasi PIN
         Optional<UserPin> pinOpt = userPinRepository.findByAccountnum(fromUser.getAccountnum());
-        if (pinOpt.isEmpty()) {
-            return "PIN not registered";
+        if (!pinOpt.isPresent()) {
+            res.setStatus("error");
+            res.setMessage("PIN not registered");
+            return res;
         }
 
-        try {
-            String hashedPin = Base64.getEncoder().encodeToString(
-                MessageDigest.getInstance("SHA-256").digest(request.getPin().getBytes())
-            );
-            if (!pinOpt.get().getPinHash().equals(hashedPin)) {
-                return "Invalid PIN";
-            }
-        } catch (Exception e) {
-            return "PIN validation error";
+        UserPin userPin = pinOpt.get();
+        String hashedPin = hashPin(request.getPin());
+
+        if (!userPin.getPinHash().equals(hashedPin)) {
+            res.setStatus("error");
+            res.setMessage("Invalid PIN");
+            return res;
         }
 
+
+        // Validasi: tidak boleh transfer ke diri sendiri
+        if (fromUser.getAccountnum().equals(toUser.getAccountnum())) {
+            res.setStatus("error");
+            res.setMessage("Cannot transfer to the same account");
+            return res;
+        }
+
+        // Validasi: transfer tidak boleh 0 atau negatif
+        if (request.getAmount() <= 0) {
+            res.setStatus("error");
+            res.setMessage("Transfer amount must be greater than zero");
+            return res;
+        }
+
+        // Validasi: saldo harus cukup
         if (fromUser.getBalance() < request.getAmount()) {
-            return "Insufficient balance";
+            res.setStatus("error");
+            res.setMessage("Insufficient balance");
+            return res;
         }
 
-        // Update balances
+        // Proses transfer: update saldo
         fromUser.setBalance(fromUser.getBalance() - request.getAmount());
         toUser.setBalance(toUser.getBalance() + request.getAmount());
+
         userRepository.save(fromUser);
         userRepository.save(toUser);
 
-        // Create transactions
-        TransactionModel senderTxn = new TransactionModel();
-        senderTxn.setAccountnum(fromUser.getAccountnum());
-        senderTxn.setAmount(request.getAmount());
-        senderTxn.setDateTime(LocalDate.now().toString());
-        senderTxn.setFromTo("To: " + toUser.getAccountnum());
-        senderTxn.setDescription(request.getDescription());
-        senderTxn.setType("expense");
+        res.setStatus("success");
+        res.setMessage("Transfer completed");
+        res.setFromName(fromUser.getFullName());
+        res.setFromAccountnum(fromUser.getAccountnum());
+        res.setToName(toUser.getFullName());
+        res.setToAccountnum(toUser.getAccountnum());
+        res.setAmount(request.getAmount());
 
-        TransactionModel receiverTxn = new TransactionModel();
-        receiverTxn.setAccountnum(toUser.getAccountnum());
-        receiverTxn.setAmount(request.getAmount());
-        receiverTxn.setDateTime(LocalDate.now().toString());
-        receiverTxn.setFromTo("From: " + fromUser.getAccountnum());
-        receiverTxn.setDescription(request.getDescription());
-        receiverTxn.setType("income");
+        return res;
+    }
 
-        transactionRepository.save(senderTxn);
-        transactionRepository.save(receiverTxn);
-
-        return "Transfer successful";
+    private String hashPin(String pin) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(pin.getBytes());
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            throw new RuntimeException("Error hashing PIN", e);
+        }
     }
 }

@@ -38,4 +38,9 @@ public class PinService {
         userPinRepository.save(userPin);
         return "PIN registered successfully.";
     }
+
+    public boolean checkAccountExists(String accountnum) {
+        return userPinRepository.findByAccountnum(accountnum).isPresent();
+    }
+
 }

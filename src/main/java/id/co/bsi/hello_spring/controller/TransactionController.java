@@ -28,6 +28,14 @@ public class TransactionController {
     ) {
         Page<TransactionModel> resultPage = transactionService.getFilteredTransactions(token, accountnum, search, page, size, sortBy, direction);
 
+        if (resultPage == null || resultPage.isEmpty()) {
+            TransactionPageResponse failRes = new TransactionPageResponse();
+            failRes.setStatus("fail");
+            failRes.setMessage("Unauthorized or account not found");
+            failRes.setData(null);
+            return ResponseEntity.status(401).body(failRes);
+        }
+
         TransactionPageResponse.DataContent content = new TransactionPageResponse.DataContent();
         content.setTransactions(resultPage.getContent());
         content.setTotalPages(resultPage.getTotalPages());
@@ -41,6 +49,7 @@ public class TransactionController {
 
         return ResponseEntity.ok(res);
     }
+
 
     @PostMapping
     public ResponseEntity<?> postTransaction(

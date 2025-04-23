@@ -18,6 +18,20 @@ public class DashboardController {
             @RequestHeader("token") String token,
             @PathVariable String accountnum
     ) {
-        return ResponseEntity.ok(dashboardService.getDashboard(token, accountnum));
+        DashboardResponse response = dashboardService.getDashboard(token, accountnum);
+
+        if ("fail".equals(response.getStatus())) {
+            // Bedakan error: unauthorized vs account mismatch
+            if ("Unauthorized access".equals(response.getMessage())) {
+                return ResponseEntity.status(401).body(response); // 401 Unauthorized
+            } else if ("Account number mismatch".equals(response.getMessage())) {
+                return ResponseEntity.status(403).body(response); // 403 Forbidden
+            } else {
+                return ResponseEntity.badRequest().body(response); // 400 Bad Request default
+            }
+        }
+
+        return ResponseEntity.ok(response); // 200 OK kalau sukses
     }
+
 }

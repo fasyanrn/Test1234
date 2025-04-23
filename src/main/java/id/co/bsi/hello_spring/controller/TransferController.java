@@ -18,16 +18,10 @@ public class TransferController {
 
     @PostMapping("/transfer")
     public ResponseEntity<TransferResponse> transfer(@RequestBody TransferRequest transferRequest) {
-        String result = transferService.transfer(transferRequest);
-
-        TransferResponse transferResponse = new TransferResponse();
-        if ("Transfer successful".equals(result)) {
-            transferResponse.setStatus("success");
-            transferResponse.setMessage("Transfer completed");
+        TransferResponse transferResponse = transferService.transfer(transferRequest);
+        if ("success".equals(transferResponse.getStatus())) {
             return ResponseEntity.ok(transferResponse);
         } else {
-            transferResponse.setStatus("fail");
-            transferResponse.setMessage(result);
             return new ResponseEntity<>(transferResponse, HttpStatus.BAD_REQUEST);
         }
     }
