@@ -5,4 +5,8 @@ import lombok.Data;
 @Data
 public class DashboardRequest {
     private String token;
+
+
 }
+
+
