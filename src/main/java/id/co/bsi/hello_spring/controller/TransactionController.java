@@ -1,13 +1,15 @@
-
 package id.co.bsi.hello_spring.controller;
 
 import id.co.bsi.hello_spring.dto.response.TransactionPageResponse;
 import id.co.bsi.hello_spring.model.TransactionModel;
 import id.co.bsi.hello_spring.service.TransactionService;
+import id.co.bsi.hello_spring.util.SecurityUtility;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -16,25 +18,27 @@ public class TransactionController {
     @Autowired
     private TransactionService transactionService;
 
-    @GetMapping("/{accountnum}")
-    public ResponseEntity<TransactionPageResponse> getTransactions(
-            @RequestHeader("token") String token,
-            @PathVariable String accountnum,
+    @Autowired
+    private SecurityUtility securityUtility;
+
+    @GetMapping("/me")
+    public ResponseEntity<TransactionPageResponse> getMyTransactions(
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "desc") String direction
     ) {
-        Page<TransactionModel> resultPage = transactionService.getFilteredTransactions(token, accountnum, search, page, size, sortBy, direction);
-
-        if (resultPage == null || resultPage.isEmpty()) {
+        String userId = securityUtility.getCurrentUserId();
+        if (userId == null) {
             TransactionPageResponse failRes = new TransactionPageResponse();
             failRes.setStatus("fail");
-            failRes.setMessage("Unauthorized or account not found");
+            failRes.setMessage("Unauthorized access");
             failRes.setData(null);
             return ResponseEntity.status(401).body(failRes);
         }
+
+        Page<TransactionModel> resultPage = transactionService.getFilteredTransactions(userId, search, page, size, sortBy, direction);
 
         TransactionPageResponse.DataContent content = new TransactionPageResponse.DataContent();
         content.setTransactions(resultPage.getContent());
@@ -50,16 +54,69 @@ public class TransactionController {
         return ResponseEntity.ok(res);
     }
 
-
     @PostMapping
-    public ResponseEntity<?> postTransaction(
-            @RequestHeader("token") String token,
-            @RequestBody TransactionModel transaction
-    ) {
-        TransactionModel saved = transactionService.saveTransaction(token, transaction);
-        if (saved == null) {
+    public ResponseEntity<?> postTransaction(@RequestBody TransactionModel transaction) {
+        String userId = securityUtility.getCurrentUserId();
+        if (userId == null || !userId.equals(transaction.getAccountnum())) {
             return ResponseEntity.status(401).body("Unauthorized or account mismatch");
         }
+
+        TransactionModel saved = transactionService.saveTransaction(transaction);
         return ResponseEntity.ok(saved);
     }
+
+    @GetMapping("/summary")
+    public ResponseEntity<?> getTransactionSummary() {
+        String userId = securityUtility.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "status", "fail",
+                    "message", "Unauthorized access",
+                    "data", null
+            ));
+        }
+
+        Map<String, Integer> summary = transactionService.getTransactionSummary(userId);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Transaction summary",
+                "data", summary
+        ));
+    }
+
+    @GetMapping("/summary/this_month")
+    public ResponseEntity<?> getSummaryThisMonth() {
+        return getSummaryByMonthRange(0);
+    }
+
+    @GetMapping("/summary/last_month")
+    public ResponseEntity<?> getSummaryLastMonth() {
+        return getSummaryByMonthRange(1);
+    }
+
+    @GetMapping("/summary/three_month_ago")
+    public ResponseEntity<?> getSummaryThreeMonthsAgo() {
+        return getSummaryByMonthRange(3);
+    }
+
+    private ResponseEntity<?> getSummaryByMonthRange(int monthsAgo) {
+        String userId = securityUtility.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "status", "fail",
+                    "message", "Unauthorized access",
+                    "data", null
+            ));
+        }
+
+        Map<String, Integer> summary = transactionService.getTransactionSummaryByMonth(userId, monthsAgo);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Transaction summary for " + (monthsAgo == 0 ? "this month" : (monthsAgo == 1 ? "last month" : "three months ago")),
+                "data", summary
+        ));
+    }
+
 }
