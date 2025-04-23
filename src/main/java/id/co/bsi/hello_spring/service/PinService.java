@@ -3,6 +3,7 @@ package id.co.bsi.hello_spring.service;
 
 import id.co.bsi.hello_spring.model.UserPin;
 import id.co.bsi.hello_spring.repository.UserPinRepository;
+import id.co.bsi.hello_spring.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,9 @@ public class PinService {
 
     @Autowired
     private UserPinRepository userPinRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     public String hashPin(String pin) {
         try {
@@ -39,8 +43,9 @@ public class PinService {
         return "PIN registered successfully.";
     }
 
+    // Perbaiki disini
     public boolean checkAccountExists(String accountnum) {
-        return userPinRepository.findByAccountnum(accountnum).isPresent();
+        return userRepository.findByAccountnum(accountnum).isPresent();
     }
-
 }
+

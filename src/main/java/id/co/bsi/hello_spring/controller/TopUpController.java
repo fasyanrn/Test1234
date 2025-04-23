@@ -40,6 +40,12 @@ public class TopUpController {
             return ResponseEntity.status(404).body(response);
         }
 
+        if (topUpRequest.getMethod() == null || topUpRequest.getMethod().trim().isEmpty()) {
+            response.setStatus("fail");
+            response.setMessage("Topup method must be provided.");
+            return ResponseEntity.status(400).body(response);
+        }
+
         User user = userOpt.get();
         if (!user.getToken().equals(token)) {
             response.setStatus("fail");
@@ -47,7 +53,36 @@ public class TopUpController {
             return ResponseEntity.status(401).body(response);
         }
 
-        // Validate PIN
+        // Validasi kartu ATM
+        if (topUpRequest.getCardNumber() == null || !topUpRequest.getCardNumber().matches("\\d{16}")) {
+            response.setStatus("fail");
+            response.setMessage("Invalid card number. Must be 16 digits.");
+            return ResponseEntity.status(400).body(response);
+        }
+        if (topUpRequest.getCvv() == null || !topUpRequest.getCvv().matches("\\d{3}")) {
+            response.setStatus("fail");
+            response.setMessage("Invalid CVV. Must be 3 digits.");
+            return ResponseEntity.status(400).body(response);
+        }
+        if (topUpRequest.getExpirationDate() == null || !topUpRequest.getExpirationDate().matches("(0[1-9]|1[0-2])/\\d{2}")) {
+            response.setStatus("fail");
+            response.setMessage("Invalid expiration date format. Must be MM/YY.");
+            return ResponseEntity.status(400).body(response);
+        }
+        // Cek kadaluarsa kartu
+        String[] expParts = topUpRequest.getExpirationDate().split("/");
+        int expMonth = Integer.parseInt(expParts[0]);
+        int expYear = Integer.parseInt("20" + expParts[1]);
+
+        java.time.YearMonth expDate = java.time.YearMonth.of(expYear, expMonth);
+        java.time.YearMonth now = java.time.YearMonth.now();
+        if (expDate.isBefore(now)) {
+            response.setStatus("fail");
+            response.setMessage("Card has expired.");
+            return ResponseEntity.status(400).body(response);
+        }
+
+        // Validasi PIN
         Optional<UserPin> userPinOpt = userPinRepository.findByAccountnum(user.getAccountnum());
         if (userPinOpt.isEmpty()) {
             response.setStatus("fail");
@@ -57,7 +92,7 @@ public class TopUpController {
 
         try {
             String hashedPin = Base64.getEncoder().encodeToString(
-                MessageDigest.getInstance("SHA-256").digest(topUpRequest.getPin().getBytes())
+                    MessageDigest.getInstance("SHA-256").digest(topUpRequest.getPin().getBytes())
             );
             if (!userPinOpt.get().getPinHash().equals(hashedPin)) {
                 response.setStatus("fail");
@@ -96,4 +131,5 @@ public class TopUpController {
 
         return ResponseEntity.ok(response);
     }
+
 }
