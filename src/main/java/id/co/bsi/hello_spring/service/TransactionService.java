@@ -121,5 +121,69 @@ public class TransactionService {
         );
     }
 
+    public Page<TransactionModel> getFilteredTransactionsByDate(String accountnum, String keyword, int page, int size, String sortBy, String direction, String dateStart, String dateEnd) {
+        Sort sort = Sort.by(Sort.Direction.fromOptionalString(direction.toUpperCase()).orElse(Sort.Direction.DESC), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        List<TransactionModel> allData = transactionRepository.findAllByAccountnum(accountnum);
+
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+
+        try {
+            if (dateStart != null && !dateStart.isEmpty()) {
+                dateStart = formatFlexibleDate(dateStart); // Normalize YYYY-M-D to YYYY-MM-DD
+                start = LocalDate.parse(dateStart).atStartOfDay();
+            }
+            if (dateEnd != null && !dateEnd.isEmpty()) {
+                dateEnd = formatFlexibleDate(dateEnd);
+                end = LocalDate.parse(dateEnd).atTime(23, 59, 59, 999999999);
+            }
+        } catch (Exception e) {
+            // Handle parsing errors if needed
+        }
+
+        final LocalDateTime finalStart = start;
+        final LocalDateTime finalEnd = end;
+
+        List<TransactionModel> filtered = allData.stream()
+                .filter(t -> {
+                    boolean matches = true;
+                    if (keyword != null && !keyword.trim().isEmpty()) {
+                        String kw = keyword.trim().toLowerCase();
+                        matches = (t.getDescription() != null && t.getDescription().toLowerCase().contains(kw)) ||
+                                (t.getFromTo() != null && t.getFromTo().toLowerCase().contains(kw)) ||
+                                (t.getType() != null && t.getType().toLowerCase().contains(kw)) ||
+                                String.valueOf(t.getAmount()).contains(kw) ||
+                                (t.getDateTime() != null && t.getDateTime().toLowerCase().contains(kw));
+                    }
+                    try {
+                        LocalDateTime dateTime = LocalDateTime.parse(t.getDateTime());
+                        if (finalStart != null && dateTime.isBefore(finalStart)) return false;
+                        if (finalEnd != null && dateTime.isAfter(finalEnd)) return false;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                    return matches;
+                })
+                .collect(Collectors.toList());
+
+        int startIdx = Math.min((int) pageable.getOffset(), filtered.size());
+        int endIdx = Math.min((startIdx + pageable.getPageSize()), filtered.size());
+        List<TransactionModel> pagedData = filtered.subList(startIdx, endIdx);
+
+        return new PageImpl<>(pagedData, pageable, filtered.size());
+    }
+
+    private String formatFlexibleDate(String date) {
+        String[] parts = date.split("-");
+        String year = parts[0];
+        String month = parts[1].length() == 1 ? "0" + parts[1] : parts[1];
+        String day = parts[2].length() == 1 ? "0" + parts[2] : parts[2];
+        return year + "-" + month + "-" + day;
+    }
+
+
+
 }
 
