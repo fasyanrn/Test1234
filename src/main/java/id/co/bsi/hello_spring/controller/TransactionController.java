@@ -29,7 +29,7 @@ public class TransactionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction,
+            @RequestParam(defaultValue = "asc") String direction,
             @RequestParam(required = false) String dateStart,
             @RequestParam(required = false) String dateEnd
     ) {
@@ -42,7 +42,7 @@ public class TransactionController {
             return ResponseEntity.status(401).body(failRes);
         }
 
-        Page<TransactionModel> resultPage = transactionService.getFilteredTransactionsByDate(
+        Page<TransactionModel> resultPage = transactionService.getFilteredTransactionsCombined(
                 userId, search, page, size, sortBy, direction, dateStart, dateEnd
         );
 
@@ -59,6 +59,7 @@ public class TransactionController {
 
         return ResponseEntity.ok(res);
     }
+
 
 
 

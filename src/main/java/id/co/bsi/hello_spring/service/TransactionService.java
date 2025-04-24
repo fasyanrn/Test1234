@@ -20,7 +20,7 @@ public class TransactionService {
     private TransactionRepository transactionRepository;
 
     public Page<TransactionModel> getFilteredTransactions(String accountnum, String keyword, int page, int size, String sortBy, String direction) {
-        Sort sort = Sort.by(Sort.Direction.fromOptionalString(direction.toUpperCase()).orElse(Sort.Direction.DESC), sortBy);
+        Sort sort = Sort.by(Sort.Direction.fromOptionalString(direction.toUpperCase()).orElse(Sort.Direction.ASC), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         List<TransactionModel> allData = transactionRepository.findAllByAccountnum(accountnum);
@@ -121,18 +121,24 @@ public class TransactionService {
         );
     }
 
-    public Page<TransactionModel> getFilteredTransactionsByDate(String accountnum, String keyword, int page, int size, String sortBy, String direction, String dateStart, String dateEnd) {
-        Sort sort = Sort.by(Sort.Direction.fromOptionalString(direction.toUpperCase()).orElse(Sort.Direction.DESC), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+    public Page<TransactionModel> getFilteredTransactionsCombined(
+            String accountnum, String keyword, int page, int size, String sortBy, String direction, String dateStart, String dateEnd
+    ) {
+        // Validasi kolom sorting
+        List<String> validColumns = List.of("id", "dateTime", "type", "fromTo", "description", "amount");
+        if (!validColumns.contains(sortBy)) {
+            sortBy = "id";
+        }
 
+        // Ambil data dari DB
         List<TransactionModel> allData = transactionRepository.findAllByAccountnum(accountnum);
 
+        // Filter tanggal fleksibel
         LocalDateTime start = null;
         LocalDateTime end = null;
-
         try {
             if (dateStart != null && !dateStart.isEmpty()) {
-                dateStart = formatFlexibleDate(dateStart); // Normalize YYYY-M-D to YYYY-MM-DD
+                dateStart = formatFlexibleDate(dateStart);
                 start = LocalDate.parse(dateStart).atStartOfDay();
             }
             if (dateEnd != null && !dateEnd.isEmpty()) {
@@ -140,12 +146,13 @@ public class TransactionService {
                 end = LocalDate.parse(dateEnd).atTime(23, 59, 59, 999999999);
             }
         } catch (Exception e) {
-            // Handle parsing errors if needed
+            // Ignore error date parsing
         }
 
         final LocalDateTime finalStart = start;
         final LocalDateTime finalEnd = end;
 
+        // Filter keyword dan tanggal
         List<TransactionModel> filtered = allData.stream()
                 .filter(t -> {
                     boolean matches = true;
@@ -168,13 +175,45 @@ public class TransactionService {
                 })
                 .collect(Collectors.toList());
 
-        int startIdx = Math.min((int) pageable.getOffset(), filtered.size());
-        int endIdx = Math.min((startIdx + pageable.getPageSize()), filtered.size());
+        // Sorting manual
+        final String finalSortBy = sortBy;
+        final String finalDirection = direction;
+
+        filtered.sort((t1, t2) -> {
+            int comparison = 0;
+            switch (finalSortBy) {
+                case "amount":
+                    comparison = Integer.compare(t1.getAmount(), t2.getAmount());
+                    break;
+                case "dateTime":
+                    comparison = LocalDateTime.parse(t1.getDateTime()).compareTo(LocalDateTime.parse(t2.getDateTime()));
+                    break;
+                case "type":
+                    comparison = t1.getType().compareToIgnoreCase(t2.getType());
+                    break;
+                case "fromTo":
+                    comparison = t1.getFromTo().compareToIgnoreCase(t2.getFromTo());
+                    break;
+                case "description":
+                    comparison = t1.getDescription().compareToIgnoreCase(t2.getDescription());
+                    break;
+                default:
+                    comparison = Long.compare(t1.getId(), t2.getId());
+                    break;
+            }
+            return finalDirection.equalsIgnoreCase("asc") ? comparison : -comparison;
+        });
+
+
+        // Pagination
+        int startIdx = Math.min(page * size, filtered.size());
+        int endIdx = Math.min(startIdx + size, filtered.size());
         List<TransactionModel> pagedData = filtered.subList(startIdx, endIdx);
 
-        return new PageImpl<>(pagedData, pageable, filtered.size());
+        return new PageImpl<>(pagedData, PageRequest.of(page, size), filtered.size());
     }
 
+    // Helper: format tanggal fleksibel
     private String formatFlexibleDate(String date) {
         String[] parts = date.split("-");
         String year = parts[0];
@@ -182,6 +221,7 @@ public class TransactionService {
         String day = parts[2].length() == 1 ? "0" + parts[2] : parts[2];
         return year + "-" + month + "-" + day;
     }
+
 
 
 
