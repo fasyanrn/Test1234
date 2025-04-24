@@ -29,7 +29,9 @@ public class TransactionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction
+            @RequestParam(defaultValue = "desc") String direction,
+            @RequestParam(required = false) String dateStart,
+            @RequestParam(required = false) String dateEnd
     ) {
         String userId = securityUtility.getCurrentUserId();
         if (userId == null) {
@@ -40,7 +42,9 @@ public class TransactionController {
             return ResponseEntity.status(401).body(failRes);
         }
 
-        Page<TransactionModel> resultPage = transactionService.getFilteredTransactions(userId, search, page, size, sortBy, direction);
+        Page<TransactionModel> resultPage = transactionService.getFilteredTransactionsByDate(
+                userId, search, page, size, sortBy, direction, dateStart, dateEnd
+        );
 
         TransactionPageResponse.DataContent content = new TransactionPageResponse.DataContent();
         content.setTransactions(resultPage.getContent());
@@ -55,6 +59,8 @@ public class TransactionController {
 
         return ResponseEntity.ok(res);
     }
+
+
 
     @PostMapping
     public ResponseEntity<?> postTransaction(@RequestBody TransactionModel transaction) {
