@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -61,9 +63,38 @@ public class TransactionController {
             return ResponseEntity.status(401).body("Unauthorized or account mismatch");
         }
 
+        // Validasi dan format dateTime
+        try {
+            if (transaction.getDateTime() == null || transaction.getDateTime().trim().isEmpty()) {
+                // Auto sekarang jika kosong
+                transaction.setDateTime(java.time.LocalDateTime.now().toString());
+            } else {
+                // Parse dateTime dari request
+                LocalDateTime inputDateTime;
+
+                if (transaction.getDateTime().length() == 10) { // format YYYY-MM-DD
+                    inputDateTime = LocalDate.parse(transaction.getDateTime()).atStartOfDay();
+                } else {
+                    inputDateTime = LocalDateTime.parse(transaction.getDateTime()); // ISO 8601
+                }
+
+                // Validasi tidak boleh melebihi sekarang
+                if (inputDateTime.isAfter(LocalDateTime.now())) {
+                    return ResponseEntity.badRequest().body("dateTime cannot be in the future.");
+                }
+
+                // Set format yang pasti panjang (pakai toString ISO full)
+                transaction.setDateTime(inputDateTime.toString());
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Invalid dateTime format.");
+        }
+
         TransactionModel saved = transactionService.saveTransaction(transaction);
         return ResponseEntity.ok(saved);
     }
+
+
 
     @GetMapping("/summary")
     public ResponseEntity<?> getTransactionSummary() {

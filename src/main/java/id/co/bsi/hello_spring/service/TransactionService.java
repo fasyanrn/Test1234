@@ -70,15 +70,35 @@ public class TransactionService {
     public Map<String, Integer> getTransactionSummaryByMonth(String accountnum, int monthsAgo) {
         List<TransactionModel> transactions = transactionRepository.findAllByAccountnum(accountnum);
 
-        LocalDate now = LocalDate.now().minusMonths(monthsAgo);
-        int year = now.getYear();
-        int month = now.getMonthValue();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startDate;
+        LocalDateTime endDate;
+
+        if (monthsAgo == 0) { // THIS MONTH
+            startDate = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            endDate = now; // sampai hari ini
+        } else if (monthsAgo == 1) { // LAST MONTH
+            LocalDate lastMonthStart = now.minusMonths(1).toLocalDate().withDayOfMonth(1);
+            LocalDate lastMonthEnd = lastMonthStart.withDayOfMonth(lastMonthStart.lengthOfMonth());
+            startDate = lastMonthStart.atStartOfDay();
+            endDate = lastMonthEnd.atTime(23, 59, 59, 999999999);
+        } else if (monthsAgo == 3) { // THREE MONTH AGO
+            LocalDate threeMonthStart = now.minusMonths(3).toLocalDate().withDayOfMonth(1);
+            LocalDate lastMonthEnd = now.minusMonths(1).toLocalDate().withDayOfMonth(now.minusMonths(1).toLocalDate().lengthOfMonth());
+            startDate = threeMonthStart.atStartOfDay();
+            endDate = lastMonthEnd.atTime(23, 59, 59, 999999999);
+        } else {
+            // Default fallback, should not happen
+            startDate = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            endDate = now;
+        }
 
         List<TransactionModel> filtered = transactions.stream()
                 .filter(t -> {
                     try {
-                        LocalDateTime dateTime = LocalDateTime.parse(t.getDateTime()); // AUTO ISO PARSE
-                        return dateTime.getYear() == year && dateTime.getMonthValue() == month;
+                        LocalDateTime dateTime = LocalDateTime.parse(t.getDateTime());
+                        return (dateTime.isEqual(startDate) || dateTime.isAfter(startDate)) &&
+                                (dateTime.isBefore(endDate) || dateTime.isEqual(endDate));
                     } catch (Exception e) {
                         return false;
                     }
@@ -100,5 +120,6 @@ public class TransactionService {
                 "totalExpense", totalExpense
         );
     }
+
 }
 
