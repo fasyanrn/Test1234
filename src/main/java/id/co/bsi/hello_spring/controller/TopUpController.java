@@ -89,27 +89,27 @@ public class TopUpController {
         }
 
         // Validasi PIN
-        Optional<UserPin> userPinOpt = userPinRepository.findByAccountnum(user.getAccountnum());
-        if (userPinOpt.isEmpty()) {
-            response.setStatus("fail");
-            response.setMessage("PIN not registered.");
-            return ResponseEntity.status(401).body(response);
-        }
-
-        try {
-            String hashedPin = Base64.getEncoder().encodeToString(
-                    MessageDigest.getInstance("SHA-256").digest(topUpRequest.getPin().getBytes())
-            );
-            if (!userPinOpt.get().getPinHash().equals(hashedPin)) {
-                response.setStatus("fail");
-                response.setMessage("Invalid PIN");
-                return ResponseEntity.status(401).body(response);
-            }
-        } catch (Exception e) {
-            response.setStatus("fail");
-            response.setMessage("PIN validation error.");
-            return ResponseEntity.status(500).body(response);
-        }
+//        Optional<UserPin> userPinOpt = userPinRepository.findByAccountnum(user.getAccountnum());
+//        if (userPinOpt.isEmpty()) {
+//            response.setStatus("fail");
+//            response.setMessage("PIN not registered.");
+//            return ResponseEntity.status(401).body(response);
+//        }
+//
+//        try {
+//            String hashedPin = Base64.getEncoder().encodeToString(
+//                    MessageDigest.getInstance("SHA-256").digest(topUpRequest.getPin().getBytes())
+//            );
+//            if (!userPinOpt.get().getPinHash().equals(hashedPin)) {
+//                response.setStatus("fail");
+//                response.setMessage("Invalid PIN");
+//                return ResponseEntity.status(401).body(response);
+//            }
+//        } catch (Exception e) {
+//            response.setStatus("fail");
+//            response.setMessage("PIN validation error.");
+//            return ResponseEntity.status(500).body(response);
+//        }
 
         // Update balance
         user.setBalance(user.getBalance() + topUpRequest.getAmount());
