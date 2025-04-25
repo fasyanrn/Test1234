@@ -132,7 +132,7 @@ public class TransactionController {
             ));
         }
 
-        Map<String, Integer> summary = transactionService.getTransactionSummary(userId);
+        Map<String, Object> summary = transactionService.getTransactionSummary(userId);
 
         return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -140,6 +140,7 @@ public class TransactionController {
                 "data", summary
         ));
     }
+
 
     @GetMapping("/summary/this_month")
     public ResponseEntity<?> getSummaryThisMonth() {

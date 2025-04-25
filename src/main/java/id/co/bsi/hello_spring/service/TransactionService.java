@@ -50,7 +50,7 @@ public class TransactionService {
         return transactionRepository.save(transaction);
     }
 
-    public Map<String, Integer> getTransactionSummary(String accountnum) {
+    public Map<String, Object> getTransactionSummary(String accountnum) {
         List<TransactionModel> transactions = transactionRepository.findAllByAccountnum(accountnum);
 
         int totalIncome = transactions.stream()
@@ -63,11 +63,31 @@ public class TransactionService {
                 .mapToInt(TransactionModel::getAmount)
                 .sum();
 
+        DateTimeFormatter inputFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        String firstDate = transactions.stream()
+                .map(TransactionModel::getDateTime)
+                .sorted()
+                .findFirst()
+                .map(dt -> LocalDateTime.parse(dt, inputFormatter).format(outputFormatter))
+                .orElse(null);
+
+        String lastDate = transactions.stream()
+                .map(TransactionModel::getDateTime)
+                .sorted((d1, d2) -> d2.compareTo(d1))
+                .findFirst()
+                .map(dt -> LocalDateTime.parse(dt, inputFormatter).format(outputFormatter))
+                .orElse(null);
+
         return Map.of(
                 "totalIncome", totalIncome,
-                "totalExpense", totalExpense
+                "totalExpense", totalExpense,
+                "firstTransactionDate", firstDate,
+                "lastTransactionDate", lastDate
         );
     }
+
 
     public Map<String, Integer> getTransactionSummaryByMonth(String accountnum, int monthsAgo) {
         List<TransactionModel> transactions = transactionRepository.findAllByAccountnum(accountnum);
