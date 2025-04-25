@@ -61,6 +61,24 @@ public class TransactionController {
     }
 
 
+    @GetMapping("/summary/monthly_chart")
+    public ResponseEntity<?> getMonthlyChart() {
+        String userId = securityUtility.getCurrentUserId();
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                    "status", "fail",
+                    "message", "Unauthorized access",
+                    "data", null
+            ));
+        }
+
+        Map<String, Object> chartData = transactionService.getMonthlyChartSummary(userId);
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Monthly chart data",
+                "data", chartData
+        ));
+    }
 
 
     @PostMapping
