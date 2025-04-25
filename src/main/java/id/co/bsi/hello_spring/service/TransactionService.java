@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Map;
@@ -222,6 +224,76 @@ public class TransactionService {
         return year + "-" + month + "-" + day;
     }
 
+    public Map<String, Object> getMonthlyChartSummary(String accountnum) {
+        List<TransactionModel> transactions = transactionRepository.findAllByAccountnum(accountnum);
+
+        // Buat list bulan Januari sampai sekarang
+        String[] monthNames = {"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"};
+        List<String> labels = new ArrayList<>();
+        List<Integer> incomeData = new ArrayList<>();
+        List<Integer> expenseData = new ArrayList<>();
+
+        LocalDateTime now = LocalDateTime.now();
+        int currentMonth = now.getMonthValue(); // 1-12
+
+        for (int m = 1; m <= currentMonth; m++) {
+            final int month = m;
+            final int year = now.getYear();
+
+            labels.add(monthNames[month - 1]);
+
+            int totalIncome = transactions.stream()
+                    .filter(t -> {
+                        try {
+                            LocalDateTime dateTime = LocalDateTime.parse(t.getDateTime());
+                            return "income".equalsIgnoreCase(t.getType()) &&
+                                    dateTime.getMonthValue() == month &&
+                                    dateTime.getYear() == year;
+                        } catch (Exception e) {
+                            return false;
+                        }
+                    })
+                    .mapToInt(TransactionModel::getAmount)
+                    .sum();
+
+            int totalExpense = transactions.stream()
+                    .filter(t -> {
+                        try {
+                            LocalDateTime dateTime = LocalDateTime.parse(t.getDateTime());
+                            return "expense".equalsIgnoreCase(t.getType()) &&
+                                    dateTime.getMonthValue() == month &&
+                                    dateTime.getYear() == year;
+                        } catch (Exception e) {
+                            return false;
+                        }
+                    })
+                    .mapToInt(TransactionModel::getAmount)
+                    .sum();
+
+            incomeData.add(totalIncome);
+            expenseData.add(totalExpense);
+        }
+
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("labels", labels);
+        response.put("datasets", List.of(
+                Map.of(
+                        "label", "Income",
+                        "data", incomeData,
+                        "borderColor", "rgb(75, 192, 192)",
+                        "backgroundColor", "rgba(75, 192, 192, 0.2)"
+                ),
+                Map.of(
+                        "label", "Expense",
+                        "data", expenseData,
+                        "borderColor", "rgb(255, 99, 132)",
+                        "backgroundColor", "rgba(255, 99, 132, 0.2)"
+                )
+        ));
+
+        return response;
+    }
 
 
 
