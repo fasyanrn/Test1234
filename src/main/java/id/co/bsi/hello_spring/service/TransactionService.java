@@ -325,6 +325,28 @@ public class TransactionService {
         return response;
     }
 
+    public Map<String, Object> getDonutChartSummary(String accountnum, int monthsAgo) {
+        Map<String, Object> summary = getTransactionSummaryByMonth(accountnum, monthsAgo);
+
+        int income = (int) summary.get("totalIncome");
+        int expense = (int) summary.get("totalExpense");
+        int total = income + expense;
+
+        int incomePct = total == 0 ? 0 : (int) Math.round((income * 100.0) / total);
+        int expensePct = total == 0 ? 0 : (int) Math.round((expense * 100.0) / total);
+
+        return Map.of(
+                "labels", List.of("Income", "Expense"),
+                "datasets", List.of(Map.of(
+                        "data", List.of(incomePct, expensePct),
+                        "backgroundColor", List.of("rgb(75, 192, 192)", "rgb(255, 99, 132)"),
+                        "hoverOffset", 4
+                )),
+                "totalIncome", income,
+                "totalExpense", expense
+        );
+    }
+
 
 
 }
